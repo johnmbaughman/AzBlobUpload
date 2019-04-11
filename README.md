@@ -1,5 +1,5 @@
 # AzBlobUpload
-Tool for uploading blobs to Azure with rudimentary, yet effective, restart capabilities.
+.NET Core 2.1 tool for uploading blobs to Azure with rudimentary, yet effective, restart capabilities.
 
 # Usage
 
