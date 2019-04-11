@@ -9,7 +9,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 
-namespace Tfs2AzUpload
+namespace AzBlobUpload
 {
     internal class Block
     {
