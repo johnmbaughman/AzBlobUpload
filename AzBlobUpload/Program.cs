@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,14 +9,14 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 
-namespace AzBlobUpload
+namespace Tfs2AzUpload
 {
     internal class Block
     {
         public string BlockId { get; set; }
         public List<string> BlockIds { get; set; }
         public int BlockNumber { get; set; }
-        public int BlockSize { get; set; }
+        public long BlockSize { get; set; }
         public long RemainingBytes { get; set; }
     }
 
@@ -81,7 +81,7 @@ namespace AzBlobUpload
                     var cloudBlobContainer = cloudBlobClient.GetContainerReference(parameters.ContainerName);
                     var cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(Path.GetFileName(parameters.SourceFile));
 
-                    int blockSize = restartBlock?.BlockSize ?? 100 * (1024 * 1024); // 100MB
+                    long blockSize = restartBlock?.BlockSize ?? 100L * (1024L * 1024L); // 100MB
                     int blockNumber = restartBlock?.BlockNumber ?? 0;
                     var blockIds = restartBlock?.BlockIds ?? new List<string>();
                     long fileSize = restartBlock?.RemainingBytes ?? new FileInfo(parameters.SourceFile).Length;
@@ -93,21 +93,21 @@ namespace AzBlobUpload
 
                     Console.WriteLine($"Uploading file: {parameters.SourceFile}");
                     Console.WriteLine($"Uploading bytes: {fileSize}");
-                    Console.WriteLine($"Blocks to upload: {Math.Ceiling(fileSize / (double)(100 * 1024 * 1024))}");
+                    Console.WriteLine($"Blocks to upload: {Math.Ceiling(fileSize / (double) (100 * 1024 * 1024))}");
 
                     using (var fileStream = new FileStream(parameters.SourceFile, FileMode.Open, FileAccess.Read))
                     {
                         while (fileSize > 0)
                         {
-                            int bufferSize = fileSize > blockSize ? blockSize : (int)fileSize;
+                            long bufferSize = fileSize > blockSize ? blockSize : fileSize;
 
                             var buffer = new byte[bufferSize];
                             var binaryReader = new BinaryReader(fileStream);
 
                             fileStream.Seek(blockSize * blockNumber, SeekOrigin.Begin);
-                            binaryReader.Read(buffer, 0, bufferSize);
+                            fileStream.Read(buffer, 0, (int)bufferSize);
 
-                            var memoryStream = new MemoryStream(buffer, 0, bufferSize);
+                            var memoryStream = new MemoryStream(buffer, 0, (int)bufferSize);
 
                             string blockId = restartBlock?.BlockId ?? Convert.ToBase64String(Encoding.ASCII.GetBytes($"BlockId{blockNumber:0000000}"));
                             if (!blockIds.Contains(blockId))
@@ -151,10 +151,19 @@ namespace AzBlobUpload
                     Console.WriteLine("Error returned from the service: {0}", ex.Message);
                     WriteRestartFile(restartBlock, parameters.SourceFile);
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: {0}", ex.Message);
+                    WriteRestartFile(restartBlock, parameters.SourceFile);
+                }
                 finally
                 {
                     stopwatch.Stop();
                     Console.WriteLine($"Process complete. Total elapsed time: {stopwatch.Elapsed}");
+#if DEBUG
+                    Console.Write("Press any key to continue...");
+                    Console.ReadKey();
+#endif
                 }
             }
         }
