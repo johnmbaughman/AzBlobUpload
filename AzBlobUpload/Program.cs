@@ -9,7 +9,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 
-namespace AzBlobUpload
+namespace Tfs2AzUpload
 {
     internal class Block
     {
@@ -128,6 +128,7 @@ namespace AzBlobUpload
                             var blockHash = md5.ComputeHash(buffer);
                             string md5Hash = Convert.ToBase64String(blockHash, 0, 16);
 
+                            WriteRestartFile(restartBlock, parameters.SourceFile);
                             await cloudBlockBlob.PutBlockAsync(blockId, memoryStream, md5Hash);
 
                             Console.WriteLine($"Block number: {blockNumber}, Block size: {bufferSize}, Block ID: {blockId}, MD5 Hash: {md5Hash}, Blocks Written: {blockIds.Count - 1}, Elapsed time: {stopwatch.Elapsed}");
@@ -149,12 +150,10 @@ namespace AzBlobUpload
                 catch (StorageException ex)
                 {
                     Console.WriteLine("Error returned from the service: {0}", ex.Message);
-                    WriteRestartFile(restartBlock, parameters.SourceFile);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("Error: {0}", ex.Message);
-                    WriteRestartFile(restartBlock, parameters.SourceFile);
                 }
                 finally
                 {
